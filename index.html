@@ -16,7 +16,12 @@
       flex-direction: column;
       align-items: center;
       padding: 20px;
+      transition: background 0.5s, color 0.5s;
+      color: initial;
     }
+    body.warning-mode { background: #fff3cd !important; }
+    body.duplicate-mode { background: #8b0000 !important; color: black !important; }
+
     textarea, input, button {
       font-size: 16px;
       width: 90%;
@@ -27,15 +32,36 @@
       border: 1px solid #ccc;
       box-sizing: border-box;
     }
+
     button {
       background: #007bff;
       color: white;
       border: none;
       cursor: pointer;
     }
-    #copyButton { background: #a728a7; }
+
     #deleteListButton { background: #0f4d0a; }
+    #copyButton { background: #a728a7; }
     #clearLogsButton { background: #ffc107; color: black; }
+
+    #customToast {
+      position: fixed;
+      top: -100px;
+      left: 0;
+      width: 100%;
+      background-color: #343a40;
+      color: white;
+      text-align: center;
+      padding: 16px;
+      font-size: 18px;
+      font-weight: bold;
+      transition: top 0.5s;
+      z-index: 9999;
+    }
+    #customToast.show { top: 0; }
+    #customToast.error { background: #d93025; }
+    #customToast.success { background: #28a745; }
+    #customToast.warning { background: #f9c851; color: black; }
   </style>
 </head>
 
@@ -68,6 +94,14 @@ const emailRef = db.ref("emails");
 const copyLogsRef = db.ref("copyLogs");
 
 let emailList = [];
+let isDuplicateToast = false;
+
+/* ============ DEVICE ID ============ */
+let deviceId = localStorage.getItem("deviceId");
+if (!deviceId) {
+  deviceId = "dev_" + Math.random().toString(36).substring(2,10);
+  localStorage.setItem("deviceId", deviceId);
+}
 
 /* ============ UTILS ============ */
 function extractEmails(text) {
@@ -80,6 +114,24 @@ function updateCount() {
     `📊 Số email còn lại: ${emailList.length}`;
 }
 
+/* ============ TOAST ============ */
+function showToast(msg, isError=false, isSuccess=false, isWarning=false) {
+  const t = document.getElementById("customToast");
+  t.className = "show";
+  t.textContent = msg;
+  if (isError) t.classList.add("error");
+  if (isSuccess) t.classList.add("success");
+  if (isWarning) t.classList.add("warning");
+  setTimeout(() => t.className = "", 4000);
+}
+
+/* ============ COPY ============ */
+function copyText(text) {
+  navigator.clipboard.writeText(text)
+    .then(() => showToast(`✅ Đã copy: ${text}`, false, true))
+    .catch(() => showToast("⚠️ Không thể copy", true));
+}
+
 /* ============ FIREBASE LISTENER (FIX) ============ */
 emailRef.on("value", snap => {
   const data = snap.val();
@@ -90,7 +142,7 @@ emailRef.on("value", snap => {
 /* ============ ADD EMAIL (FIX) ============ */
 addListButton.onclick = () => {
   const emails = extractEmails(emailListInput.value);
-  if (!emails.length) return alert("Không có email hợp lệ");
+  if (!emails.length) return showToast("⚠️ Không có email hợp lệ", true);
 
   emails.forEach(e => emailRef.push(e));
   emailListInput.value = "";
@@ -100,34 +152,35 @@ addListButton.onclick = () => {
 deleteListButton.onclick = () => {
   if (!confirm("Xóa toàn bộ email?")) return;
   emailRef.remove();
+  showToast("✅ Đã xóa danh sách", false, true);
 };
 
-/* ============ COPY ============ */
-function copyText(text) {
-  navigator.clipboard.writeText(text);
-}
-
+/* ============ MANUAL COPY ============ */
 manualCopyButton.onclick = () => {
-  if (emailOutput.value) copyText(emailOutput.value);
+  if (!emailOutput.value) return showToast("⚠️ Không có email", true);
+  copyText(emailOutput.value);
 };
 
 /* ============ AUTO COPY (FIX) ============ */
 copyButton.onclick = () => {
-  if (!emailList.length) return alert("Hết email");
+  if (!emailList.length) return showToast("⚠️ Danh sách đã hết email", true);
 
-  const index = Math.floor(Math.random() * emailList.length);
-  const email = emailList[index];
+  const email = emailList[Math.floor(Math.random() * emailList.length)];
   emailOutput.value = email;
   copyText(email);
 
   emailRef.orderByValue().equalTo(email).limitToFirst(1).once("value", s => {
     s.forEach(c => c.ref.remove());
   });
+
+  const now = Date.now();
+  copyLogsRef.child(now + "_" + deviceId).set({ email, time: now, deviceId });
 };
 
 /* ============ CLEAR LOG ============ */
 clearLogsButton.onclick = () => {
   copyLogsRef.remove();
+  showToast("✅ Đã clear log", false, true);
 };
 </script>
 </body>

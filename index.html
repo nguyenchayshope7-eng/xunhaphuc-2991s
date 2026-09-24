@@ -1,9 +1,10 @@
+```html
 <!DOCTYPE html>
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Quản lý Email Online - Auto Filter</title>
+<title>Quản lý SĐT Online - Auto Filter</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -17,8 +18,8 @@ body {
   align-items: center;
   padding: 20px;
   transition: background .5s, color .5s;
-  color: initial;
 }
+
 body.duplicate-mode {
   background: #8b0000 !important;
   color: black !important;
@@ -42,7 +43,10 @@ button {
   cursor: pointer;
 }
 
-#deleteListButton { background: #0f4d0a; }
+#deleteListButton {
+  background: #0f4d0a;
+}
+
 #copyButton {
   font-size: 20px;
   padding: 18px;
@@ -50,7 +54,11 @@ button {
   max-width: 380px;
   background: #a728a7;
 }
-#clearLogsButton { background: #ffc107; color: black; }
+
+#clearLogsButton {
+  background: #ffc107;
+  color: black;
+}
 
 #customToast {
   position: fixed;
@@ -67,9 +75,18 @@ button {
   z-index: 9999;
   transition: top .5s ease-in-out;
 }
-#customToast.show { top: 0; }
-#customToast.error { background-color: #d93025; }
-#customToast.success { background-color: #28a745; }
+
+#customToast.show {
+  top: 0;
+}
+
+#customToast.error {
+  background-color: #d93025;
+}
+
+#customToast.success {
+  background-color: #28a745;
+}
 </style>
 </head>
 
@@ -77,150 +94,346 @@ button {
 
 <div id="customToast"></div>
 
-<h3>📨 Quản lý danh sách Email Online</h3>
+<h3>📱 Quản lý danh sách Số Điện Thoại Online</h3>
 
-<textarea id="emailListInput" placeholder="Dán email, text rác, phân cách bất kỳ"></textarea>
-<button id="addListButton">➕ Thêm Email</button>
-<button id="deleteListButton">🗑️ Xóa Danh Sách Email</button>
+<textarea
+  id="phoneListInput"
+  placeholder="Dán số điện thoại, text rác, phân cách bất kỳ">
+</textarea>
 
-<input type="text" id="emailOutput" readonly placeholder="Email sẽ xuất hiện ở đây">
+<button id="addListButton">➕ Thêm SĐT</button>
+
+<button id="deleteListButton">
+  🗑️ Xóa Danh Sách SĐT
+</button>
+
+<input
+  type="text"
+  id="phoneOutput"
+  readonly
+  placeholder="Số điện thoại sẽ xuất hiện ở đây"
+>
+
 <button id="manualCopyButton">📋 Copy</button>
 
-<p id="count">📊 Số email còn lại: 0</p>
+<p id="count">📊 Số điện thoại còn lại: 0</p>
 
 <button id="clearLogsButton">🧹 Clear Log Copy</button>
-<button id="copyButton">📋 Lấy & Copy Email</button>
+
+<button id="copyButton">
+  📋 Lấy & Copy Số Điện Thoại
+</button>
 
 <script>
+
 /* ========= FIREBASE ========= */
+
 firebase.initializeApp({
   apiKey: "AIzaSyBArMthV7bSzHB8Xy48AT6jo4z1Xek51Nw",
   authDomain: "nhatxupro-c91a2.firebaseapp.com",
-  databaseURL: "https://nhatxupro-c91a2-default-rtdb.asia-southeast1.firebasedatabase.app"
+  databaseURL:
+    "https://nhatxupro-c91a2-default-rtdb.asia-southeast1.firebasedatabase.app"
 });
 
 const db = firebase.database();
-const emailRef = db.ref("emails");
+
+const phoneRef = db.ref("phones");
 const copyLogsRef = db.ref("copyLogs");
 
-let emailList = [];
+let phoneList = [];
 let isDuplicateToast = false;
 
+
 /* ========= DEVICE ID ========= */
+
 let deviceId = localStorage.getItem("deviceId");
+
 if (!deviceId) {
-  deviceId = "dev_" + Math.random().toString(36).substring(2,10);
+  deviceId =
+    "dev_" + Math.random().toString(36).substring(2, 10);
+
   localStorage.setItem("deviceId", deviceId);
 }
 
+
 /* ========= UTILS ========= */
-function extractEmails(text) {
-  const regex = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi;
-  return [...new Set(text.match(regex) || [])];
+
+// Lấy số điện thoại Việt Nam
+function extractPhones(text) {
+
+  const regex =
+    /(?:\+84|84|0)(?:3|5|7|8|9)\d{8}\b/g;
+
+  const matches = text.match(regex) || [];
+
+  const normalized = matches.map(phone => {
+
+    phone = phone.replace(/\s|\.|\-|\(|\)/g, "");
+
+    if (phone.startsWith("+84")) {
+      phone = "0" + phone.substring(3);
+    }
+
+    if (phone.startsWith("84")) {
+      phone = "0" + phone.substring(2);
+    }
+
+    return phone;
+  });
+
+  return [...new Set(normalized)];
 }
+
 
 function updateCount() {
+
   document.getElementById("count").textContent =
-    `📊 Số email còn lại: ${emailList.length}`;
+    `📊 Số điện thoại còn lại: ${phoneList.length}`;
 }
 
+
 /* ========= TOAST ========= */
-function showToast(msg, type="") {
+
+function showToast(msg, type = "") {
+
   const t = document.getElementById("customToast");
+
   t.textContent = msg;
   t.className = "show " + type;
 
   if (type !== "error") {
+
     setTimeout(() => {
-      if (!isDuplicateToast) t.className = "";
+
+      if (!isDuplicateToast) {
+        t.className = "";
+      }
+
     }, 4000);
   }
 }
 
+
 function showDuplicateToast(msg) {
+
   isDuplicateToast = true;
+
   document.body.classList.add("duplicate-mode");
+
   showToast(msg, "error");
 }
 
+
 function hideDuplicateToast() {
+
   isDuplicateToast = false;
+
   document.body.classList.remove("duplicate-mode");
+
   document.getElementById("customToast").className = "";
 }
 
+
 /* ========= COPY ========= */
+
 function copyText(text) {
+
   navigator.clipboard.writeText(text)
-    .then(() => showToast(`✅ Đã copy: ${text}`, "success"))
-    .catch(() => showToast("⚠️ Không thể copy", "error"));
+
+    .then(() => {
+
+      showToast(
+        `✅ Đã copy: ${text}`,
+        "success"
+      );
+
+    })
+
+    .catch(() => {
+
+      showToast(
+        "⚠️ Không thể copy",
+        "error"
+      );
+
+    });
 }
 
+
 /* ========= FIREBASE LISTENER ========= */
-emailRef.on("value", snap => {
+
+phoneRef.on("value", snap => {
+
   const data = snap.val();
-  emailList = data ? Object.values(data) : [];
+
+  phoneList = data
+    ? Object.values(data)
+    : [];
+
   updateCount();
 });
 
-/* ========= ADD EMAIL ========= */
+
+/* ========= ADD PHONE ========= */
+
 addListButton.onclick = () => {
-  const emails = extractEmails(emailListInput.value);
-  if (!emails.length) return showToast("⚠️ Không có email hợp lệ", "error");
-  emails.forEach(e => emailRef.push(e));
-  emailListInput.value = "";
-  showToast(`✅ Đã thêm ${emails.length} email`, "success");
+
+  const phones =
+    extractPhones(
+      document.getElementById("phoneListInput").value
+    );
+
+  if (!phones.length) {
+
+    return showToast(
+      "⚠️ Không có số điện thoại hợp lệ",
+      "error"
+    );
+  }
+
+  phones.forEach(phone => {
+    phoneRef.push(phone);
+  });
+
+  document.getElementById("phoneListInput").value = "";
+
+  showToast(
+    `✅ Đã thêm ${phones.length} số điện thoại`,
+    "success"
+  );
 };
+
 
 /* ========= DELETE LIST ========= */
+
 deleteListButton.onclick = () => {
-  if (!confirm("Xóa toàn bộ email?")) return;
-  emailRef.remove();
-  showToast("✅ Đã xóa danh sách", "success");
+
+  if (!confirm("Xóa toàn bộ danh sách số điện thoại?"))
+    return;
+
+  phoneRef.remove();
+
+  showToast(
+    "✅ Đã xóa danh sách",
+    "success"
+  );
 };
+
 
 /* ========= MANUAL COPY ========= */
+
 manualCopyButton.onclick = () => {
-  if (!emailOutput.value) return showToast("⚠️ Không có email", "error");
-  copyText(emailOutput.value);
+
+  const phone =
+    document.getElementById("phoneOutput").value;
+
+  if (!phone) {
+
+    return showToast(
+      "⚠️ Không có số điện thoại",
+      "error"
+    );
+  }
+
+  copyText(phone);
 };
+
 
 /* ========= AUTO COPY + CHECK TRÙNG ========= */
+
 copyButton.onclick = () => {
+
   hideDuplicateToast();
 
-  if (!emailList.length)
-    return showToast("⚠️ Danh sách đã hết email", "error");
+  if (!phoneList.length) {
 
-  const email = emailList[Math.floor(Math.random() * emailList.length)];
-  emailOutput.value = email;
-  copyText(email);
+    return showToast(
+      "⚠️ Danh sách đã hết số điện thoại",
+      "error"
+    );
+  }
 
-  emailRef.orderByValue().equalTo(email).limitToFirst(1).once("value", s => {
-    s.forEach(c => c.ref.remove());
-  });
+  const phone =
+    phoneList[
+      Math.floor(Math.random() * phoneList.length)
+    ];
 
+  document.getElementById("phoneOutput").value =
+    phone;
+
+  copyText(phone);
+
+
+  // Xóa số vừa lấy khỏi danh sách
+  phoneRef
+    .orderByValue()
+    .equalTo(phone)
+    .limitToFirst(1)
+    .once("value", snap => {
+
+      snap.forEach(child => {
+        child.ref.remove();
+      });
+
+    });
+
+
+  // Ghi log
   const now = Date.now();
-  copyLogsRef.child(now + "_" + deviceId).set({ email, time: now, deviceId });
 
-  copyLogsRef.orderByChild("time").startAt(now - 15000).once("value", snap => {
-    const logs = snap.val() || {};
-    for (const k in logs) {
-      const log = logs[k];
-      if (log.email === email && log.deviceId !== deviceId) {
-        showDuplicateToast(`⚠️ Email "${email}" đã bị lấy bởi thiết bị khác!`);
-        break;
+  copyLogsRef
+    .child(now + "_" + deviceId)
+    .set({
+      phone: phone,
+      time: now,
+      deviceId: deviceId
+    });
+
+
+  // Kiểm tra số vừa được thiết bị khác lấy
+  copyLogsRef
+    .orderByChild("time")
+    .startAt(now - 15000)
+    .once("value", snap => {
+
+      const logs = snap.val() || {};
+
+      for (const key in logs) {
+
+        const log = logs[key];
+
+        if (
+          log.phone === phone &&
+          log.deviceId !== deviceId
+        ) {
+
+          showDuplicateToast(
+            `⚠️ Số "${phone}" đã bị lấy bởi thiết bị khác!`
+          );
+
+          break;
+        }
       }
-    }
-  });
+
+    });
+
 };
+
 
 /* ========= CLEAR LOG ========= */
+
 clearLogsButton.onclick = () => {
+
   copyLogsRef.remove();
-  showToast("✅ Đã clear log", "success");
+
+  showToast(
+    "✅ Đã clear log",
+    "success"
+  );
 };
+
 </script>
 
 </body>
 </html>
+```

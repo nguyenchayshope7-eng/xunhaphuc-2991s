@@ -197,7 +197,7 @@ button:disabled {
 >
 
 <button id="copySmsButton">
-    📋 Copy mã SMS
+    🔐 Lấy code & Copy code
 </button>
 
 <p id="count">
@@ -248,38 +248,44 @@ const copyLogsRef =
 
 
 /* =========================================================
-   SMSCODE API - CHI CAN THAY TOKEN O DAY
+   SMSCODE - GOI QUA BACKEND PROXY
+   KHONG DE TOKEN SMSCODE TRONG INDEX.HTML
 ========================================================= */
 
-const SMSCODE_API_TOKEN = "b4dea596f6b563103b8b63e2d31159eaaea880d2eb684d233f045791bb683d06";
-const SMSCODE_API_BASE = "https://api.smscode.gg/v1";
+// Thay URL nay bang URL Cloudflare Worker cua ban.
+const SMSCODE_PROXY_URL = "https://lucky-boat-5074.nguyenchayshope7.workers.dev";
 
 let currentSmsOrderId = null;
+let currentOriginalPhone = null;
 let smsPollTimer = null;
 
 function normalizePhone(phone) {
     return String(phone || "").replace(/\D/g, "");
 }
 
-async function smsApi(path) {
+async function proxyApi(path) {
     const response = await fetch(
-        SMSCODE_API_BASE + path,
+        SMSCODE_PROXY_URL + path,
         {
             method: "GET",
             headers: {
-                "Authorization":
-                    "Bearer " + SMSCODE_API_TOKEN
+                "Accept": "application/json"
             }
         }
     );
 
-    const data = await response.json();
+    let data = null;
+    try {
+        data = await response.json();
+    } catch (_) {
+        throw new Error("Backend khong tra ve JSON");
+    }
 
     if (!response.ok || data.success === false) {
         throw new Error(
             data?.error?.message ||
             data?.message ||
-            `SMSCode HTTP ${response.status}`
+            `Backend HTTP ${response.status}`
         );
     }
 
@@ -289,50 +295,19 @@ async function smsApi(path) {
 async function findSmsOrderByPhone(phone) {
     const target = normalizePhone(phone);
 
-    // Search recent orders of every status. An order can become
-    // OTP_RECEIVED or COMPLETED after the SMS arrives, so filtering
-    // only ACTIVE can make the order disappear before we find it.
-    let offset = 0;
-    const pageSize = 100;
-    let allOrders = [];
-
-    for (let page = 0; page < 10; page++) {
-        const result = await smsApi(
-            "/orders?limit=" + pageSize + "&offset=" + offset
-        );
-
-        const orders = Array.isArray(result.data)
-            ? result.data
-            : [];
-
-        allOrders.push(...orders);
-
-        if (orders.length < pageSize) {
-            break;
-        }
-
-        offset += pageSize;
-    }
-
-    const matches = allOrders.filter(order =>
-        normalizePhone(order.phone_number) === target
+    const result = await proxyApi(
+        "/find?phone=" + encodeURIComponent(target)
     );
 
-    // API returns newest first, but sort defensively by created_at.
-    matches.sort((a, b) => {
-        const ta = Date.parse(a.created_at || "") || 0;
-        const tb = Date.parse(b.created_at || "") || 0;
-        return tb - ta;
-    });
-
-    return matches[0] || null;
+    return result.data?.order || null;
 }
 
 async function getSmsOrder(orderId) {
-    const result = await smsApi(
-        "/orders/" + encodeURIComponent(orderId)
+    const result = await proxyApi(
+        "/order?id=" + encodeURIComponent(orderId)
     );
-    return result.data || null;
+
+    return result.data?.order || null;
 }
 
 function stopSmsPolling() {
@@ -349,77 +324,162 @@ async function waitForSmsCode(orderId, originalPhone) {
     const smsOutput = document.getElementById("smsCodeOutput");
     smsOutput.value = "⏳ Đang chờ SMS...";
 
-    document.getElementById("testPhone").textContent = originalPhone || "---";
-    document.getElementById("testOrder").textContent = orderId || "---";
+    document.getElementById("testPhone").textContent =
+        originalPhone || "---";
+    document.getElementById("testOrder").textContent =
+        orderId || "---";
     document.getElementById("testOtp").textContent = "---";
 
     const check = async () => {
         try {
             const order = await getSmsOrder(orderId);
+
             if (!order) return;
 
             if (order.otp_code) {
                 smsOutput.value = order.otp_code;
-                document.getElementById("testOtp").textContent = order.otp_code;
+
+                document.getElementById("testOtp").textContent =
+                    order.otp_code;
+
                 stopSmsPolling();
-                showToast("✅ Đã nhận mã SMS: " + order.otp_code, "success");
+
+                if (copyWhenReady) {
+                    await copyText(order.otp_code);
+                } else {
+                    showToast(
+                        "✅ Đã nhận mã SMS: " + order.otp_code,
+                        "success"
+                    );
+                }
+
                 return;
             }
 
-            if (order.status === "EXPIRED" || order.status === "CANCELED") {
+            if (
+                order.status === "EXPIRED" ||
+                order.status === "CANCELED"
+            ) {
                 smsOutput.value = "Order đã hết hạn";
                 stopSmsPolling();
             }
+
         } catch (error) {
             console.error("SMSCode:", error);
+
+            smsOutput.value =
+                "Lỗi: " + (
+                    error.message || error
+                );
+
+            stopSmsPolling();
         }
     };
 
     await check();
-    smsPollTimer = setInterval(check, 3000);
+
+    if (smsPollTimer === null) {
+        smsPollTimer = setInterval(check, 3000);
+    }
 }
 
-async function startSmsForPhone(originalPhone) {
+async function startSmsForPhone(originalPhone, copyWhenReady = false) {
     try {
-        const smsOutput = document.getElementById("smsCodeOutput");
-        smsOutput.value = "🔎 Đang tìm Order...";
+        const smsOutput =
+            document.getElementById("smsCodeOutput");
 
-        const order = await findSmsOrderByPhone(originalPhone);
+        smsOutput.value =
+            "🔎 Đang tìm Order...";
+
+        const order =
+            await findSmsOrderByPhone(
+                originalPhone
+            );
 
         if (!order) {
-            smsOutput.value = "Không tìm thấy Order";
-            document.getElementById("testPhone").textContent = originalPhone || "---";
-            document.getElementById("testOrder").textContent = "---";
-            document.getElementById("testOtp").textContent = "---";
-            showToast("⚠️ Không tìm thấy Order tương ứng với SĐT", "error");
+            smsOutput.value =
+                "Không tìm thấy Order";
+
+            document.getElementById(
+                "testPhone"
+            ).textContent =
+                originalPhone || "---";
+
+            document.getElementById(
+                "testOrder"
+            ).textContent =
+                "---";
+
+            document.getElementById(
+                "testOtp"
+            ).textContent =
+                "---";
+
+            showToast(
+                "⚠️ Không tìm thấy Order tương ứng với SĐT",
+                "error"
+            );
+
             return;
         }
 
-        await waitForSmsCode(order.id, originalPhone);
-    } catch (error) {
-        console.error("SMSCode API:", error);
-        const msg = error && error.message
-            ? error.message
-            : String(error);
+        await waitForSmsCode(
+            order.id,
+            originalPhone
+        );
 
-        document.getElementById("smsCodeOutput").value =
+    } catch (error) {
+        console.error(
+            "SMSCode Proxy:",
+            error
+        );
+
+        const msg =
+            error && error.message
+                ? error.message
+                : String(error);
+
+        document.getElementById(
+            "smsCodeOutput"
+        ).value =
             "Lỗi: " + msg;
 
-        showToast("⚠️ " + msg, "error");
+        showToast(
+            "⚠️ " + msg,
+            "error"
+        );
     }
 }
 
-document.getElementById("copySmsButton").onclick = async () => {
-    const value = document.getElementById("smsCodeOutput").value.trim();
+document.getElementById(
+    "copySmsButton"
+).onclick = async () => {
 
-    if (!value || value.startsWith("⏳") || value.startsWith("🔎") ||
-        value.startsWith("Không") || value.startsWith("Lỗi") ||
-        value.startsWith("Order đã")) {
-        showToast("⚠️ Chưa có mã SMS", "error");
+    const button =
+        document.getElementById(
+            "copySmsButton"
+        );
+
+    if (!currentOriginalPhone) {
+        showToast(
+            "⚠️ Hãy lấy SĐT trước",
+            "error"
+        );
         return;
     }
 
-    await copyText(value);
+    button.disabled = true;
+    button.textContent = "⏳ Đang tìm SMS mới...";
+
+    try {
+        /* Chỉ khi bấm nút này mới bắt đầu tìm Order/SMS */
+        await startSmsForPhone(currentOriginalPhone, true);
+    } catch (error) {
+        console.error("SMSCode:", error);
+    } finally {
+        button.disabled = false;
+        button.textContent = "🔐 Lấy code & Copy code";
+    }
 };
 
 
@@ -1161,19 +1221,23 @@ document.getElementById(
         }
 
 
+        currentOriginalPhone = originalPhone;
+        currentSmsOrderId = null;
+        stopSmsPolling();
+
         document.getElementById(
             "phoneOutput"
         ).value =
             phone;
 
+        document.getElementById("smsCodeOutput").value = "Chưa lấy code";
+        document.getElementById("testPhone").textContent = originalPhone;
+        document.getElementById("testOrder").textContent = "---";
+        document.getElementById("testOtp").textContent = "---";
 
         await copyText(
             phone
         );
-
-        /* TỰ TÌM ORDER ID + LẤY OTP */
-        startSmsForPhone(originalPhone);
-
 
         const now =
             Date.now();

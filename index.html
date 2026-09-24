@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,164 +11,297 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
 <style>
+
+* {
+    box-sizing: border-box;
+}
+
 body {
-  font-family: sans-serif;
-  background: #f0f2f5;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 20px;
-  transition: background .5s, color .5s;
-  color: initial;
+    font-family: Arial, sans-serif;
+    background: #f0f2f5;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    padding: 20px;
+
+    margin: 0;
+
+    transition:
+        background .5s,
+        color .5s;
 }
 
 body.duplicate-mode {
-  background: #8b0000 !important;
-  color: black !important;
+    background: #8b0000 !important;
+    color: black !important;
+}
+
+h3 {
+    margin-top: 5px;
+    margin-bottom: 15px;
 }
 
 textarea,
 input,
 button {
-  font-size: 16px;
-  width: 90%;
-  max-width: 340px;
-  margin-top: 10px;
-  padding: 12px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  box-sizing: border-box;
+
+    font-size: 16px;
+
+    width: 90%;
+    max-width: 340px;
+
+    margin-top: 10px;
+
+    padding: 12px;
+
+    border-radius: 6px;
+
+    border: 1px solid #ccc;
+
+    box-sizing: border-box;
+}
+
+textarea {
+    min-height: 80px;
+    resize: vertical;
 }
 
 button {
-  background: #007bff;
-  color: white;
-  border: none;
-  cursor: pointer;
+
+    background: #007bff;
+
+    color: white;
+
+    border: none;
+
+    cursor: pointer;
+
+    transition: opacity .2s;
 }
 
 button:hover {
-  opacity: .9;
+    opacity: .9;
 }
 
 #deleteListButton {
-  background: #0f4d0a;
+    background: #0f4d0a;
 }
 
 #copyButton {
-  font-size: 20px;
-  padding: 18px;
-  width: 95%;
-  max-width: 380px;
-  background: #a728a7;
+
+    font-size: 20px;
+
+    padding: 18px;
+
+    width: 95%;
+
+    max-width: 380px;
+
+    background: #a728a7;
 }
 
 #clearLogsButton {
-  background: #ffc107;
-  color: black;
+    background: #ffc107;
+    color: black;
+}
+
+#manualCopyButton {
+    background: #007bff;
 }
 
 #customToast {
-  position: fixed;
-  top: -100px;
-  left: 0;
-  width: 100%;
-  background-color: #343a40;
-  color: white;
-  text-align: center;
-  padding: 16px 10px;
-  font-size: 18px;
-  font-weight: bold;
-  box-shadow: 0 4px 12px rgba(0,0,0,.3);
-  z-index: 9999;
-  transition: top .5s ease-in-out;
+
+    position: fixed;
+
+    top: -100px;
+
+    left: 0;
+
+    width: 100%;
+
+    background-color: #343a40;
+
+    color: white;
+
+    text-align: center;
+
+    padding: 16px 10px;
+
+    font-size: 18px;
+
+    font-weight: bold;
+
+    box-shadow:
+        0 4px 12px rgba(0,0,0,.3);
+
+    z-index: 9999;
+
+    transition:
+        top .5s ease-in-out;
 }
 
 #customToast.show {
-  top: 0;
+    top: 0;
 }
 
 #customToast.error {
-  background-color: #d93025;
+    background-color: #d93025;
 }
 
 #customToast.success {
-  background-color: #28a745;
+    background-color: #28a745;
 }
+
+#deviceInfo {
+
+    font-size: 12px;
+
+    color: #777;
+
+    margin-top: 15px;
+
+    word-break: break-all;
+
+    max-width: 90%;
+}
+
 </style>
+
 </head>
+
 
 <body>
 
+
+<!-- =========================
+     TOAST
+========================= -->
+
 <div id="customToast"></div>
 
-<h3>📱 Quản lý danh sách Số Điện Thoại Online</h3>
+
+<!-- =========================
+     TITLE
+========================= -->
+
+<h3>
+    📱 Quản lý danh sách Số Điện Thoại Online
+</h3>
+
+
+<!-- =========================
+     INPUT
+========================= -->
 
 <textarea
-  id="phoneListInput"
-  placeholder="Dán danh sách SĐT, text rác, phân cách bất kỳ"
-></textarea>
+    id="phoneListInput"
+    placeholder="Dán SĐT, text rác, phân cách bất kỳ">
+</textarea>
+
 
 <button id="addListButton">
-  ➕ Thêm SĐT
+    ➕ Thêm SĐT
 </button>
+
 
 <button id="deleteListButton">
-  🗑️ Xóa Danh Sách SĐT
+    🗑️ Xóa Danh Sách SĐT
 </button>
+
+
+<!-- =========================
+     OUTPUT
+========================= -->
 
 <input
-  type="text"
-  id="phoneOutput"
-  readonly
-  placeholder="SĐT sau khi bỏ 2 số đầu sẽ xuất hiện ở đây"
+    type="text"
+    id="phoneOutput"
+    readonly
+    placeholder="SĐT sau khi bỏ 2 số đầu"
 >
 
+
 <button id="manualCopyButton">
-  📋 Copy
+    📋 Copy
 </button>
+
+
+<!-- =========================
+     COUNT
+========================= -->
 
 <p id="count">
-  📊 Số SĐT còn lại: 0
+    📊 Số điện thoại còn lại: 0
 </p>
 
+
+<!-- =========================
+     LOG
+========================= -->
+
 <button id="clearLogsButton">
-  🧹 Clear Log Copy
+    🧹 Clear Log Copy
 </button>
 
+
+<!-- =========================
+     MAIN COPY
+========================= -->
+
 <button id="copyButton">
-  📋 Lấy & Copy SĐT
+    📋 Lấy & Copy Số Điện Thoại
 </button>
+
+
+<div id="deviceInfo"></div>
 
 
 <script>
+
 
 /* =========================================================
    FIREBASE
 ========================================================= */
 
 firebase.initializeApp({
-  apiKey: "AIzaSyBArMthV7bSzHB8Xy48AT6jo4z1Xek51Nw",
-  authDomain: "nhatxupro-c91a2.firebaseapp.com",
-  databaseURL:
-    "https://nhatxupro-c91a2-default-rtdb.asia-southeast1.firebasedatabase.app"
+
+    apiKey:
+        "AIzaSyBArMthV7bSzHB8Xy48AT6jo4z1Xek51Nw",
+
+    authDomain:
+        "nhatxupro-c91a2.firebaseapp.com",
+
+    databaseURL:
+        "https://nhatxupro-c91a2-default-rtdb.asia-southeast1.firebasedatabase.app"
+
 });
+
 
 const db = firebase.database();
 
-/*
-   Dùng node riêng "phones"
-   để không ảnh hưởng danh sách email cũ.
-*/
-const phoneRef = db.ref("phones");
 
 /*
-   Log dùng riêng cho SĐT
+    Node chứa danh sách SĐT
 */
-const copyLogsRef = db.ref("phoneCopyLogs");
+const phoneRef =
+    db.ref("phones");
 
+
+/*
+    Node chứa log copy
+*/
+const copyLogsRef =
+    db.ref("phoneCopyLogs");
+
+
+/* =========================================================
+   VARIABLES
+========================================================= */
 
 let phoneList = [];
+
 let isDuplicateToast = false;
 
 
@@ -175,77 +309,138 @@ let isDuplicateToast = false;
    DEVICE ID
 ========================================================= */
 
-let deviceId = localStorage.getItem("deviceId");
+let deviceId =
+    localStorage.getItem("deviceId");
+
 
 if (!deviceId) {
 
-  deviceId =
-    "dev_" +
-    Math.random()
-      .toString(36)
-      .substring(2, 10);
+    deviceId =
+        "dev_" +
+        Math.random()
+            .toString(36)
+            .substring(2, 10);
 
-  localStorage.setItem(
-    "deviceId",
-    deviceId
-  );
+    localStorage.setItem(
+        "deviceId",
+        deviceId
+    );
 }
 
 
+document.getElementById(
+    "deviceInfo"
+).textContent =
+    "Thiết bị: " + deviceId;
+
+
 /* =========================================================
-   LẤY SỐ ĐIỆN THOẠI
+   EXTRACT PHONE
 ========================================================= */
 
 /*
-   Nhận các chuỗi số từ 8 - 15 số.
+    Nhận số điện thoại quốc tế.
 
-   Ví dụ:
-   447462161407
-   84912345678
-   34612345678
-   12025550123
+    Ví dụ:
+
+    447462161407
+    +447462161407
+    44 7462 161407
+    44-7462-161407
+
+    Sau khi lấy chỉ giữ phần số.
+
+    Không bắt buộc mã quốc gia nào.
 */
 
 function extractPhones(text) {
 
-  const matches =
-    text.match(/\d{8,15}/g) || [];
+    const results = [];
 
-  return [
-    ...new Set(matches)
-  ];
+
+    /*
+        Tìm các chuỗi có số.
+
+        Cho phép:
+        khoảng trắng
+        dấu -
+        dấu .
+        dấu (
+        dấu )
+        dấu +
+    */
+
+    const matches =
+        text.match(
+            /\+?\d(?:[\d\s().-]*\d)?/g
+        ) || [];
+
+
+    matches.forEach(raw => {
+
+
+        /*
+            Chỉ giữ lại chữ số
+        */
+
+        let phone =
+            raw.replace(/\D/g, "");
+
+
+        /*
+            Số phải có từ 8 đến 15 chữ số
+        */
+
+        if (
+            phone.length >= 8 &&
+            phone.length <= 15
+        ) {
+
+            results.push(phone);
+
+        }
+
+    });
+
+
+    /*
+        Bỏ số trùng
+    */
+
+    return [
+        ...new Set(results)
+    ];
 }
 
 
 /* =========================================================
-   BỎ 2 SỐ ĐẦU
+   REMOVE FIRST 2 DIGITS
 ========================================================= */
 
 /*
-   Ví dụ:
+    Ví dụ:
 
-   447462161407
-   ↓ bỏ 44
-   7462161407
-
-   84912345678
-   ↓ bỏ 84
-   912345678
-
-   34612345678
-   ↓ bỏ 34
-   612345678
+    447462161407
+    ↓
+    7462161407
 */
 
 function removeFirstTwoDigits(phone) {
 
-  phone = String(phone);
+    phone =
+        String(phone);
 
-  if (phone.length <= 2) {
-    return "";
-  }
 
-  return phone.substring(2);
+    if (
+        phone.length <= 2
+    ) {
+
+        return "";
+
+    }
+
+
+    return phone.substring(2);
 }
 
 
@@ -255,8 +450,10 @@ function removeFirstTwoDigits(phone) {
 
 function updateCount() {
 
-  document.getElementById("count").textContent =
-    `📊 Số SĐT còn lại: ${phoneList.length}`;
+    document.getElementById(
+        "count"
+    ).textContent =
+        `📊 Số điện thoại còn lại: ${phoneList.length}`;
 }
 
 
@@ -264,55 +461,88 @@ function updateCount() {
    TOAST
 ========================================================= */
 
-function showToast(msg, type = "") {
+function showToast(
+    msg,
+    type = ""
+) {
 
-  const t =
-    document.getElementById("customToast");
+    const toast =
+        document.getElementById(
+            "customToast"
+        );
 
-  t.textContent = msg;
 
-  t.className =
-    "show " + type;
+    toast.textContent =
+        msg;
 
-  if (type !== "error") {
 
-    setTimeout(() => {
+    toast.className =
+        "show " + type;
 
-      if (!isDuplicateToast) {
-        t.className = "";
-      }
 
-    }, 4000);
-  }
+    if (
+        type !== "error"
+    ) {
+
+        setTimeout(() => {
+
+            if (
+                !isDuplicateToast
+            ) {
+
+                toast.className =
+                    "";
+
+            }
+
+        }, 4000);
+
+    }
+
 }
 
 
-function showDuplicateToast(msg) {
+/* =========================================================
+   DUPLICATE TOAST
+========================================================= */
 
-  isDuplicateToast = true;
+function showDuplicateToast(
+    msg
+) {
 
-  document.body.classList.add(
-    "duplicate-mode"
-  );
+    isDuplicateToast =
+        true;
 
-  showToast(
-    msg,
-    "error"
-  );
+
+    document.body.classList.add(
+        "duplicate-mode"
+    );
+
+
+    showToast(
+        msg,
+        "error"
+    );
+
 }
 
 
 function hideDuplicateToast() {
 
-  isDuplicateToast = false;
+    isDuplicateToast =
+        false;
 
-  document.body.classList.remove(
-    "duplicate-mode"
-  );
 
-  document.getElementById(
-    "customToast"
-  ).className = "";
+    document.body.classList.remove(
+        "duplicate-mode"
+    );
+
+
+    document.getElementById(
+        "customToast"
+    ).className =
+        "";
+
 }
 
 
@@ -322,36 +552,115 @@ function hideDuplicateToast() {
 
 function copyText(text) {
 
-  if (!text) {
+    if (!text) {
 
-    showToast(
-      "⚠️ Không có dữ liệu để copy",
-      "error"
+        showToast(
+            "⚠️ Không có SĐT để copy",
+            "error"
+        );
+
+        return;
+
+    }
+
+
+    /*
+        Clipboard API
+    */
+
+    if (
+        navigator.clipboard &&
+        navigator.clipboard.writeText
+    ) {
+
+        navigator.clipboard
+            .writeText(text)
+
+            .then(() => {
+
+                showToast(
+                    `✅ Đã copy: ${text}`,
+                    "success"
+                );
+
+            })
+
+            .catch(() => {
+
+                fallbackCopy(text);
+
+            });
+
+    } else {
+
+        fallbackCopy(text);
+
+    }
+
+}
+
+
+/* =========================================================
+   FALLBACK COPY
+========================================================= */
+
+function fallbackCopy(text) {
+
+    const temp =
+        document.createElement(
+            "textarea"
+        );
+
+
+    temp.value =
+        text;
+
+
+    temp.style.position =
+        "fixed";
+
+    temp.style.left =
+        "-9999px";
+
+
+    document.body.appendChild(
+        temp
     );
 
-    return;
-  }
 
-  navigator.clipboard
-    .writeText(text)
+    temp.focus();
 
-    .then(() => {
+    temp.select();
 
-      showToast(
-        `✅ Đã copy: ${text}`,
-        "success"
-      );
 
-    })
+    try {
 
-    .catch(() => {
+        document.execCommand(
+            "copy"
+        );
 
-      showToast(
-        "⚠️ Không thể copy",
-        "error"
-      );
 
-    });
+        showToast(
+            `✅ Đã copy: ${text}`,
+            "success"
+        );
+
+    }
+
+    catch (error) {
+
+        showToast(
+            "⚠️ Không thể copy",
+            "error"
+        );
+
+    }
+
+
+    document.body.removeChild(
+        temp
+    );
+
 }
 
 
@@ -359,216 +668,301 @@ function copyText(text) {
    FIREBASE LISTENER
 ========================================================= */
 
-phoneRef.on("value", snap => {
+phoneRef.on(
+    "value",
+    snap => {
 
-  const data = snap.val();
+        const data =
+            snap.val();
 
-  phoneList =
-    data
-      ? Object.values(data)
-      : [];
 
-  updateCount();
-});
+        phoneList =
+            data
+                ? Object.values(data)
+                : [];
+
+
+        updateCount();
+
+    },
+
+    error => {
+
+        console.error(
+            "Firebase error:",
+            error
+        );
+
+
+        showToast(
+            "⚠️ Không thể đọc Firebase",
+            "error"
+        );
+
+    }
+);
 
 
 /* =========================================================
-   THÊM SĐT
+   ADD PHONE
 ========================================================= */
 
-document
-  .getElementById("addListButton")
-  .onclick = () => {
+document.getElementById(
+    "addListButton"
+).onclick = () => {
+
 
     const input =
-      document.getElementById(
-        "phoneListInput"
-      );
+        document.getElementById(
+            "phoneListInput"
+        );
+
+
+    const text =
+        input.value;
+
+
+    if (!text.trim()) {
+
+        showToast(
+            "⚠️ Hãy nhập SĐT",
+            "error"
+        );
+
+        return;
+
+    }
+
+
+    /*
+        Lọc SĐT
+    */
 
     const phones =
-      extractPhones(
-        input.value
-      );
+        extractPhones(
+            text
+        );
+
+
+    console.log(
+        "SĐT tìm được:",
+        phones
+    );
+
 
     if (!phones.length) {
 
-      showToast(
-        "⚠️ Không có SĐT hợp lệ",
-        "error"
-      );
+        showToast(
+            "⚠️ Không có SĐT hợp lệ",
+            "error"
+        );
 
-      return;
+        return;
+
     }
 
+
     /*
-       Thêm từng SĐT vào Firebase
+        Thêm vào Firebase
     */
 
-    phones.forEach(phone => {
+    let added =
+        0;
 
-      phoneRef.push(phone);
 
-    });
+    phones.forEach(
+        phone => {
 
-    input.value = "";
+            phoneRef
+                .push(phone);
+
+            added++;
+
+        }
+    );
+
+
+    /*
+        Xóa ô nhập
+    */
+
+    input.value =
+        "";
+
 
     showToast(
-      `✅ Đã thêm ${phones.length} SĐT`,
-      "success"
+        `✅ Đã thêm ${added} SĐT`,
+        "success"
     );
-  };
+
+};
 
 
 /* =========================================================
-   XÓA DANH SÁCH
+   DELETE ALL PHONES
 ========================================================= */
 
-document
-  .getElementById("deleteListButton")
-  .onclick = () => {
+document.getElementById(
+    "deleteListButton"
+).onclick = () => {
+
 
     if (
-      !confirm(
-        "Xóa toàn bộ danh sách SĐT?"
-      )
-    ) {
-      return;
-    }
-
-    phoneRef.remove();
-
-    showToast(
-      "✅ Đã xóa danh sách SĐT",
-      "success"
-    );
-  };
-
-
-/* =========================================================
-   COPY THỦ CÔNG
-========================================================= */
-
-document
-  .getElementById("manualCopyButton")
-  .onclick = () => {
-
-    const output =
-      document.getElementById(
-        "phoneOutput"
-      );
-
-    if (!output.value) {
-
-      showToast(
-        "⚠️ Chưa có SĐT",
-        "error"
-      );
-
-      return;
-    }
-
-    copyText(
-      output.value
-    );
-  };
-
-
-/* =========================================================
-   LẤY + COPY SĐT
-========================================================= */
-
-document
-  .getElementById("copyButton")
-  .onclick = () => {
-
-    hideDuplicateToast();
-
-    /*
-       Kiểm tra danh sách
-    */
-
-    if (!phoneList.length) {
-
-      showToast(
-        "⚠️ Danh sách đã hết SĐT",
-        "error"
-      );
-
-      return;
-    }
-
-
-    /*
-       Chọn ngẫu nhiên một SĐT
-    */
-
-    const originalPhone =
-      phoneList[
-        Math.floor(
-          Math.random() *
-          phoneList.length
+        !confirm(
+            "Xóa toàn bộ danh sách SĐT?"
         )
-      ];
+    ) {
 
+        return;
 
-    /*
-       BỎ 2 SỐ ĐẦU
-
-       447462161407
-       ↓
-       7462161407
-    */
-
-    const phone =
-      removeFirstTwoDigits(
-        originalPhone
-      );
-
-
-    if (!phone) {
-
-      showToast(
-        "⚠️ SĐT không hợp lệ",
-        "error"
-      );
-
-      return;
     }
 
-
-    /*
-       Hiển thị SĐT sau khi bỏ 2 số đầu
-    */
-
-    document.getElementById(
-      "phoneOutput"
-    ).value = phone;
-
-
-    /*
-       Copy
-    */
-
-    copyText(phone);
-
-
-    /* =====================================================
-       XÓA SĐT GỐC KHỎI FIREBASE
-    ===================================================== */
 
     phoneRef
-      .orderByValue()
-      .equalTo(originalPhone)
-      .limitToFirst(1)
-      .once("value", snap => {
+        .remove()
+        .then(() => {
 
-        snap.forEach(child => {
+            showToast(
+                "✅ Đã xóa toàn bộ danh sách",
+                "success"
+            );
 
-          child.ref.remove();
+        })
+        .catch(() => {
+
+            showToast(
+                "⚠️ Không thể xóa danh sách",
+                "error"
+            );
 
         });
 
-      });
+};
+
+
+/* =========================================================
+   MANUAL COPY
+========================================================= */
+
+document.getElementById(
+    "manualCopyButton"
+).onclick = () => {
+
+
+    const output =
+        document.getElementById(
+            "phoneOutput"
+        );
+
+
+    if (
+        !output.value
+    ) {
+
+        showToast(
+            "⚠️ Chưa có SĐT",
+            "error"
+        );
+
+        return;
+
+    }
+
+
+    copyText(
+        output.value
+    );
+
+};
+
+
+/* =========================================================
+   GET + COPY PHONE
+========================================================= */
+
+document.getElementById(
+    "copyButton"
+).onclick = async () => {
+
+
+    hideDuplicateToast();
+
+
+    /*
+        Kiểm tra danh sách
+    */
+
+    if (
+        !phoneList.length
+    ) {
+
+        showToast(
+            "⚠️ Danh sách đã hết SĐT",
+            "error"
+        );
+
+        return;
+
+    }
+
+
+    /*
+        Chọn ngẫu nhiên
+    */
+
+    const randomIndex =
+        Math.floor(
+            Math.random() *
+            phoneList.length
+        );
+
+
+    const originalPhone =
+        phoneList[randomIndex];
+
+
+    /*
+        Bỏ 2 số đầu
+    */
+
+    const phone =
+        removeFirstTwoDigits(
+            originalPhone
+        );
+
+
+    if (
+        !phone ||
+        phone.length < 6
+    ) {
+
+        showToast(
+            "⚠️ SĐT không hợp lệ",
+            "error"
+        );
+
+        return;
+
+    }
+
+
+    /*
+        Hiển thị kết quả
+    */
+
+    document.getElementById(
+        "phoneOutput"
+    ).value =
+        phone;
+
+
+    /*
+        Copy
+    */
+
+    copyText(
+        phone
+    );
 
 
     /* =====================================================
@@ -576,96 +970,165 @@ document
     ===================================================== */
 
     const now =
-      Date.now();
+        Date.now();
 
 
-    copyLogsRef
-      .child(
-        now + "_" + deviceId
-      )
-      .set({
+    const logKey =
+        now + "_" + deviceId;
 
-        /*
-           Lưu cả số gốc và số sau xử lý
-        */
 
-        originalPhone:
-          originalPhone,
+    await copyLogsRef
+        .child(logKey)
+        .set({
 
-        phone:
-          phone,
+            originalPhone:
+                originalPhone,
 
-        time:
-          now,
+            phone:
+                phone,
 
-        deviceId:
-          deviceId
+            time:
+                now,
 
-      });
+            deviceId:
+                deviceId
+
+        });
 
 
     /* =====================================================
-       KIỂM TRA TRÙNG THIẾT BỊ
+       KIỂM TRA TRÙNG
     ===================================================== */
 
     copyLogsRef
-      .orderByChild("time")
-      .startAt(
-        now - 15000
-      )
-      .once("value", snap => {
-
-        const logs =
-          snap.val() || {};
-
-
-        for (
-          const key in logs
-        ) {
-
-          const log =
-            logs[key];
+        .orderByChild("time")
+        .startAt(
+            now - 15000
+        )
+        .once(
+            "value",
+            snap => {
 
 
-          /*
-             Nếu cùng SĐT đã được
-             thiết bị khác lấy trong
-             15 giây gần nhất
-          */
+                const logs =
+                    snap.val() || {};
 
-          if (
-            log.phone === phone &&
-            log.deviceId !== deviceId
-          ) {
 
-            showDuplicateToast(
-              `⚠️ SĐT "${phone}" đã bị lấy bởi thiết bị khác!`
-            );
+                for (
+                    const key in logs
+                ) {
 
-            break;
-          }
-        }
 
-      });
+                    const log =
+                        logs[key];
 
-  };
+
+                    /*
+                        Không tính chính mình
+                    */
+
+                    if (
+                        log.deviceId ===
+                        deviceId
+                    ) {
+
+                        continue;
+
+                    }
+
+
+                    /*
+                        Nếu cùng số sau xử lý
+                    */
+
+                    if (
+                        log.phone ===
+                        phone
+                    ) {
+
+                        showDuplicateToast(
+                            `⚠️ SĐT "${phone}" đã bị lấy bởi thiết bị khác!`
+                        );
+
+
+                        break;
+
+                    }
+
+                }
+
+            }
+        );
+
+
+    /* =====================================================
+       XÓA SỐ GỐC KHỎI FIREBASE
+    ===================================================== */
+
+    phoneRef
+        .orderByValue()
+        .equalTo(
+            originalPhone
+        )
+        .limitToFirst(1)
+        .once(
+            "value",
+            snap => {
+
+                snap.forEach(
+                    child => {
+
+                        child.ref.remove();
+
+                    }
+                );
+
+            }
+        );
+
+};
 
 
 /* =========================================================
    CLEAR LOG
 ========================================================= */
 
-document
-  .getElementById("clearLogsButton")
-  .onclick = () => {
+document.getElementById(
+    "clearLogsButton"
+).onclick = () => {
 
-    copyLogsRef.remove();
 
-    showToast(
-      "✅ Đã clear log",
-      "success"
-    );
-  };
+    if (
+        !confirm(
+            "Clear toàn bộ log copy?"
+        )
+    ) {
+
+        return;
+
+    }
+
+
+    copyLogsRef
+        .remove()
+        .then(() => {
+
+            showToast(
+                "✅ Đã clear log",
+                "success"
+            );
+
+        })
+        .catch(() => {
+
+            showToast(
+                "⚠️ Không thể clear log",
+                "error"
+            );
+
+        });
+
+};
 
 
 </script>
